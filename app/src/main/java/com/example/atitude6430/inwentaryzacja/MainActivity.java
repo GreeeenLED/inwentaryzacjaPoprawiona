@@ -101,6 +101,7 @@ public class MainActivity extends AppCompatActivity implements CNewProduct.OnNew
                                 @Override
                                 public void run() {
                                     findCode();
+                                    int com;
 
                                 }
                             });
