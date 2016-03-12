@@ -157,14 +157,6 @@ public class MainActivity extends AppCompatActivity implements CNewProduct.OnNew
             DialogFragment newProduct = new CNewProduct();
             newProduct.show(getFragmentManager(),"warning");
         }
-        /*if (InvObject.findDescription(barCode.getText().toString())!=null) {
-            number.setText("ilosc: " + loadedData.get(InvObject.number())[2]);
-        }else {
-            //add new code
-            DialogFragment newProduct = new CNewProduct();
-            newProduct.show(getFragmentManager(),"warning");
-        }
-        *///
         Log.d("kod i opis","kod: "+barCode.getText()+ " opis: "+InvObject.findDescription(barCode.getText().toString()));
     }
     @Override
