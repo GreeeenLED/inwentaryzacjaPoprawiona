@@ -134,7 +134,7 @@ public class MainActivity extends AppCompatActivity implements CNewProduct.OnNew
                 break;
             case R.id.loadLast:
                 ReadSD("result");
-                Log.d("","");
+                Log.d("","ff");
                 break;
             case R.id.exit:
                 break;
