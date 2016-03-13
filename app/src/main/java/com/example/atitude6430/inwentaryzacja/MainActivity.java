@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Typeface;
+import android.os.AsyncTask;
 import android.os.Environment;
 import android.support.annotation.RequiresPermission;
 import android.support.v7.app.AppCompatActivity;
@@ -20,6 +21,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -27,8 +29,10 @@ import android.widget.Toast;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Time;
 import java.util.ArrayList;
@@ -84,6 +88,7 @@ public class MainActivity extends AppCompatActivity implements CNewProduct.OnNew
     TextView description;
     TextView number;
     EditText enterNumber;
+    ProgressBar progressBar;
     boolean firstRun;//
 
 
@@ -136,6 +141,8 @@ public class MainActivity extends AppCompatActivity implements CNewProduct.OnNew
         description = (TextView) findViewById(R.id.textViewDescription);
         number = (TextView) findViewById(R.id.textViewIlosc);
         enterNumber = (EditText) findViewById(R.id.editTextTypeIlosc);
+        progressBar = (ProgressBar) findViewById(R.id.progressBar);
+        progressBar.setVisibility(View.INVISIBLE);
         firstRun = true;
         SetTextValues("","");
 
@@ -164,7 +171,9 @@ public class MainActivity extends AppCompatActivity implements CNewProduct.OnNew
                 block = true;
                 break;
             case R.id.save:
-                WriteSD();
+                //WriteSD();
+                progressBar.setVisibility(View.VISIBLE);
+                new SDTaskWrite().execute();
                 break;
             case R.id.loadLast:
                 fileName = "result";
@@ -277,7 +286,45 @@ public class MainActivity extends AppCompatActivity implements CNewProduct.OnNew
 
     }
     public void WriteSD(){
-        sdOperations.WriteData(loadedData);
+        File write = new File(root1,"result.csv");
+        CSVWriter writer = null;
+        try {
+            writer = new CSVWriter(new OutputStreamWriter(new FileOutputStream(write)),';');
+            writer.writeAll(loadedData);
+            writer.close();
+            Toast.makeText(this,"results saved",Toast.LENGTH_SHORT).show();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        //sdOperations.WriteData(loadedData);
+    }
+    class SDTaskWrite extends AsyncTask<Void,Void,Void>{
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            File write = new File(root1,"result.csv");
+            CSVWriter writer = null;
+            try {
+                writer = new CSVWriter(new OutputStreamWriter(new FileOutputStream(write)),';');
+                writer.writeAll(loadedData);
+                writer.close();
+                //Toast.makeText(this,"results saved",Toast.LENGTH_SHORT).show();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            Toast.makeText(getApplicationContext(),"Results saved",Toast.LENGTH_SHORT).show();
+            progressBar.setVisibility(View.GONE);
+            super.onPostExecute(aVoid);
+        }
     }
     @Override
     public void OnOKPressed() {
@@ -285,47 +332,59 @@ public class MainActivity extends AppCompatActivity implements CNewProduct.OnNew
         //ReadSD(fileName);
         ReadingTest(fileName);
     }
+    /////////////////wczytywanie i zapisywanie
+
     File root1 = Environment.getExternalStorageDirectory();
     public void ReadingTest(String fileName){
+        progressBar.setVisibility(View.VISIBLE);
         if (firstRun){
-            File data = new File(root1,fileName+".csv");
-            CSVReader read = null;
-            // List<String[]> dataFromSD = new ArrayList<String[]>();
-            loadedData.clear();
-            String line[] = {};
-
-            try{
-                read = new CSVReader(new InputStreamReader(new FileInputStream(data)),';');
-                while (true){
-                    line = read.readNext();
-                    if (line!=null){
-                        loadedData.add(line);
-                    }else {
-                        //Toast.makeText(context, "load successfull", Toast.LENGTH_SHORT).show();
-                        break;
-                    }
-                }
-            }catch (FileNotFoundException e) {
-                Toast.makeText(this,"no file found",Toast.LENGTH_SHORT).show();
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            if (loadedData.size()!=0)
-                Toast.makeText(this, "load successfull", Toast.LENGTH_SHORT).show();
-            firstRun = false;
-
-           /* for (int i=0;i<sdOperations.ReadData(fileName).size();i++){
-                Log.d("R data", "->" + loadedData.get(i)[0] + " "+loadedData.get(i)[1]+" "+loadedData.get(i)[2]);
-            }*/
-            return;
+            new SDTaskRead().execute();
         }
         if (firstRun==false){
             DialogFragment warning = new CWorning();
             warning.show(getFragmentManager(),"warning2");
         }
-        //Toast.makeText(context, "load successfull", Toast.LENGTH_SHORT).show();
-        //return dataFromSD;
+    }
+    class SDTaskRead extends AsyncTask<Void,Void,Void> {
+        String errorMsg;
+        @Override
+        protected Void doInBackground(Void... params) {
+            if (firstRun){
+                File data = new File(root1,fileName+".csv");
+                CSVReader read = null;
+                // List<String[]> dataFromSD = new ArrayList<String[]>();
+                loadedData.clear();
+                String line[] = {};
+                try{
+                    read = new CSVReader(new InputStreamReader(new FileInputStream(data)),';');
+                    while (true){
+                        line = read.readNext();
+                        if (line!=null){
+                            loadedData.add(line);
+                        }else {
+                            break;
+                        }
+                    }
+                    errorMsg="load completed";
+                }catch (FileNotFoundException e) {
+                    errorMsg = "file not found";
+                    Log.d("noe","file found");
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    errorMsg = "error";
+                    e.printStackTrace();
+                }
+                firstRun = false;
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            progressBar.setVisibility(View.GONE);
+            Toast.makeText(getApplicationContext(),errorMsg,Toast.LENGTH_SHORT).show();
+            super.onPostExecute(aVoid);
+        }
     }
 //FOR datawedge==========================================================================
     @Override
